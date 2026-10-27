@@ -74,6 +74,14 @@
 (setq make-backup-files nil)              ; Disables backup files
 (delete-selection-mode 1)                 ; Replaces selected text when pasting
 
+;; UTF-8
+(set-language-environment "UTF-8")
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(setq locale-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+(setq-default buffer-file-coding-system 'utf-8)
+
 ;; Various attempts at starting the editor zoomed in by 1 (+1)
 ;;(text-scale-set 1)
 ;;(set-face-attribute 'default nil :height 120)
