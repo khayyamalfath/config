@@ -3,6 +3,7 @@
         email = alessandrogiorgini@national.shitposting.agency
 [core]
         editor = 'C:/Program Files/Emacs/emacs-31.1/bin/emacs.exe'
+	longpaths = true
 
 [includeIf "gitdir:C:/Lavoro/2_Progetti/"]
         path = ~/.gitconfig-pluservice
