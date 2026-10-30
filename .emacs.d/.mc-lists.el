@@ -3,6 +3,7 @@
 
 (setq mc/cmds-to-run-for-all
       '(
+        my-backspace-whitespace-to-tab-stop
         tab-to-tab-stop
         ))
 
