@@ -4,6 +4,7 @@
 (setq mc/cmds-to-run-for-all
       '(
         my-backspace-whitespace-to-tab-stop
+        my-tab
         tab-to-tab-stop
         ))
 

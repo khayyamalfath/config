@@ -1,0 +1,70 @@
+The following instructions allow for emacs to be run on your windows machine,
+at startup, as a daemon in background.
+This brings files loading time to sub 80 ms.
+Heh.
+
+1. Set up the server
+- Press Win + R
+- Type "shell:startup" and press Enter
+- A folder will open
+- Create a link to "C:\Program Files\Emacs\emacs-31.1\bin\runemacs.exe"
+- Add "--daemon" as an argument in its properties
+
+Now emacs will start as a background process every time you log in to your
+machine
+
+2. Set up the client
+We can now run "emacsclientw.exe" to launch an instance of the server we have
+running. The way you would do this is by launching
+"C:\Program Files\Emacs\emacs-31.1\bin\emacsclientw.exe" with a series of
+arguments:
+
+-c           tells the client to open a new window
+-a ""        tells the client to start the emacs server if it's not running
+             already
+
+2.1 Use the client with the command line
+You can simply run:
+
+        emacsclientw -c -a "" filename
+
+2.2 Use the client by double clicking a file or by using the "Open with"
+context menu
+
+On Windows, by creating a link with said arguments I could not find a
+way to then set up the link in the "Open with" context menu, nor to have it
+opened by default. Windows seems to either try to always launch the original
+.exe, or to get stuck in a loop during the "Open with" step.
+
+To solve that, you can use this:
+
+"""
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\Applications\emacsclientw.exe\shell\open\command]
+@="\"C:\\Program Files\\Emacs\\emacs-31.1\\bin\\emacsclientw.exe\" -c -a \"\" \"%1\""
+"""
+
+This adds a rule to the Windows registry such that every time you launch
+"emacsclientw.exe" by double clicking on a file or using the "Open with" context
+menu, it runs with the arguments we need.
+
+Now, you can set "emacsclientw.exe" as the default association using the
+"Open with" context menu, double click, etc.
+
+If you wish to undo this later on, you may do so using this:
+
+"""
+Windows Registry Editor Version 5.00
+
+[-HKEY_CURRENT_USER\Software\Classes\Applications\emacsclientw.exe]
+"""
+
+2.3 Taskbar shortcut
+- Drag "C:\Program Files\Emacs\emacs-31.1\bin\emacsclientw.exe" to your taskbar.
+- Right click on it
+- Right click on "emacsclientw"
+- Click on Properties
+- Under "Shortcut", in the "Target" field add the parameters
+Example:
+"C:\Program Files\Emacs\emacs-31.1\bin\emacsclientw.exe" -c -a ""

@@ -13,44 +13,20 @@
 ;;(defvar my-profile 'work)
 
 ;; Theme
-;; Disabling syntax highlighting using (global-font-lock-mode -1) will interfere
-;; with other useful functionalities (such as for example whitespace-mode) that
-;; are NOT syntax highlighting.
-;; So you're going to do it here.
-;; (defvar bg "black")
-;; (defvar fg "white")
-
-;; (set-face-attribute 'default                      nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-comment-face       nil :background bg :foreground fg)
-;; (set-face-attribute 'region                       nil :background fg :foreground bg)
-;; (set-face-attribute 'font-lock-builtin-face       nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-constant-face      nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-keyword-face       nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-variable-name-face nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-function-name-face nil :background bg :foreground fg)
-;; (set-face-attribute 'font-lock-string-face        nil :background bg :foreground fg)
-
-;; (dolist (face '(default
-;;                 font-lock-comment-face
-;;                 font-lock-builtin-face
-;;                 font-lock-constant-face
-;;                 font-lock-keyword-face
-;;                 font-lock-string-face
-;;                 font-lock-function-name-face
-;;                 font-lock-variable-name-face
-;;   (when (facep face)
-;;     (set-face-attribute face nil :background bg :foreground fg)))
-
-;; ;; Selection is inverted so it stays visible
-;; (set-face-attribute 'region nil :background fg :foreground bg)
+(add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
+(load-theme 'bianco-nero t)
 
 ;;; User interface
-;;(menu-bar-mode -1)                        ; Disables menu bar
+(menu-bar-mode  1)                         ; Disables menu bar
 (tool-bar-mode -1)                        ; Disables toolbar
-(tab-bar-mode -1)                         ; Disables tabs
+(tab-bar-mode  -1)                         ; Disables tabs
+;; se avvio emacs come server+client la barra non si vede finche non faccio
+;; ev-b non capisco perché
+;; con runemacs funziona normale
+(horizontal-scroll-bar-mode 1)            ; Enables horizontal scroll bar
 (setq inhibit-startup-screen t)           ; Disables startup screen
 (setq initial-scratch-message nil)        ; Disables scrach message
-(setq-default truncate-lines t)           ; Disables word wrap
+(show-paren-mode -1)                      ; Disable parentheses highlighting
 (column-number-mode 1)                    ; Shows column numbers (Status bar)
 
 ;; Formats line and column numbers on the status bar
@@ -66,23 +42,26 @@
 (setq whitespace-line-column 80)
 (setq whitespace-style '(face lines-tail))
 (global-whitespace-mode 1)
-(set-face-attribute 'whitespace-line nil :inverse-video t)
-
-(show-paren-mode -1)                      ; Disable parentheses highlighting
+(set-face-attribute 'whitespace-line nil
+                    :inherit 'default
+                    :foreground 'unspecified
+                    :background 'unspecified
+                    :inverse-video t)
 
 ;;; Behavior
-(setq make-backup-files nil)              ; Disables backup files
-(delete-selection-mode 1)                 ; Replaces selected text when pasting
+(setq make-backup-files nil)               ; Disables backup files
+(setq revert-without-query '(".*"))        ; Please leave me alone
+(setq-default truncate-lines t)            ; Disables word wrap
+(delete-selection-mode 1)                  ; Replaces selected text when pasting
 
-;; UTF-8
-(set-language-environment "UTF-8")
-(prefer-coding-system 'utf-8)
-(set-default-coding-systems 'utf-8)
-(setq locale-coding-system 'utf-8)
-(set-selection-coding-system 'utf-8)
-(setq-default buffer-file-coding-system 'utf-8)
+;; Disables cursor blinking when selecting a region of text
+(add-hook 'activate-mark-hook   (lambda () (setq-local cursor-type nil)))
+(add-hook 'deactivate-mark-hook (lambda () (kill-local-variable 'cursor-type)))
 
-;; Various attempts at starting the editor zoomed in by 1 (+1)
+;; Removes trailing whitespaces
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; Failed or unsatisfactory attempts at starting the editor zoomed in by 1 (+1)
 ;;(text-scale-set 1)
 ;;(set-face-attribute 'default nil :height 120)
 ;;(set-face-attribute 'default nil :font "Courier New-10")
@@ -93,15 +72,95 @@
 ;;(add-to-list 'default-frame-alist '(width . 80))  ; Width set to 80 characters
 ;;(add-to-list 'default-frame-alist '(height . 24)) ; Height set to 24 lines
 
-;; Removes trailing whitespaces
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
+;; Mouse wheel while dragging a selection: scrolls the window and extends the
+;; selection to the text now under the pointer, without ending the drag.
+;; By default the wheel isn't part of the drag-tracking keymap, so it ends the
+;; tracking and deactivates the mark until the button is released.
+(defun my-drag-wheel-scroll (event)
+  (interactive "e")
+  ;; Inside the drag, transient-mark-mode is '(only ...), which makes
+  ;; mwheel-scroll deactivate the region; bind it to t just for this call
+  (let ((transient-mark-mode t))
+    (mwheel-scroll event))
+  ;; The pointer hasn't moved but the text under it has: moves point there
+  (let* ((posn (event-start event))
+         (window (posn-window posn))
+         (xy (posn-x-y posn)))
+    (when (and xy (window-live-p window) (eq window (selected-window)))
+      (let ((end (posn-point (posn-at-x-y (car xy) (cdr xy) window))))
+        (when (integer-or-marker-p end)
+          (goto-char end))))))
+
+(defun my-drag-add-wheel-keys (orig-fn map &rest args)
+  (when (eq track-mouse 'drag-tracking)
+    (dolist (prefix '("" "double-" "triple-"))
+      (dolist (dir '("up" "down"))
+        (define-key map (vector (intern (concat prefix "wheel-" dir)))
+                    #'my-drag-wheel-scroll))))
+  (apply orig-fn map args))
+
+(advice-add 'set-transient-map :around #'my-drag-add-wheel-keys)
 
 ;; Indentation and tab
 ;; https://pement.org/emacs_tabs.htm
 ;; http://blog.lujun9972.win/emacs-document/blog/2018/08/17/the-ultimate-guide-to-indentation-in-emacs-(tabs-and-spaces)/
 
-;; Permanently use tab-to-tab-stop to control TAB behavior
-(global-set-key (kbd "TAB") 'tab-to-tab-stop)
+;; Shifts every line touched by the region by AMOUNT columns, keeping the
+;; selection active so TAB / S-TAB can be pressed multiple times
+(defun my-shift-region-lines (amount)
+  (let ((end (copy-marker (region-end))))
+    (save-excursion
+      (goto-char (region-beginning))
+      (beginning-of-line)
+      (while (< (point) end)
+        ;; Blank lines are left alone
+        (unless (looking-at-p "[ \t]*$")
+          (indent-line-to (max 0 (+ (current-indentation) amount))))
+        (forward-line 1)))
+    (set-marker end nil))
+  ;; Prevents Emacs from deactivating the region after the command
+  (setq deactivate-mark nil))
+
+;; TAB: indents the region by one level, or acts as tab-to-tab-stop
+(defun my-tab ()
+  (interactive)
+  (if (use-region-p)
+      (my-shift-region-lines tab-width)
+    (call-interactively 'tab-to-tab-stop)))
+
+;; S-TAB: dedents the region (or the current line) by one level
+(defun my-backtab ()
+  (interactive)
+  (if (use-region-p)
+      (my-shift-region-lines (- tab-width))
+    (save-excursion
+      (indent-line-to (max 0 (- (current-indentation) tab-width))))))
+
+(global-set-key (kbd "TAB")       #'my-tab)
+(global-set-key (kbd "<backtab>") #'my-backtab)
+
+;; Major modes (python, web-mode...) bind TAB and <backtab> locally and would
+;; win over the global bindings. This minor mode keymap takes precedence over
+;; them, but only while a region is active (and never in the minibuffer).
+(defun my-region-key-filter (cmd)
+  (when (and (use-region-p) (not (minibufferp))) cmd))
+
+(defvar my-indent-mode-map
+  (let ((map (make-sparse-keymap)))
+    (dolist (key '("TAB" "<tab>"))
+      (define-key map (kbd key)
+                  `(menu-item "" my-tab :filter ,#'my-region-key-filter)))
+    (define-key map (kbd "<backtab>")
+                `(menu-item "" my-backtab :filter ,#'my-region-key-filter))
+    map))
+
+(define-minor-mode my-indent-mode
+  "Region indentation with TAB / S-TAB, overriding major mode bindings."
+  :global t
+  :keymap my-indent-mode-map)
+
+(my-indent-mode 1)
+
 ;; Permanently force Emacs to indent with spaces, never with TABs
 (setq-default indent-tabs-mode nil)
 ;; Permanently set the default tab-width to 8 characters
@@ -139,6 +198,25 @@
                 #'my-backspace-whitespace-to-tab-stop)
 (global-set-key [remap delete-backward-char]
                 #'my-backspace-whitespace-to-tab-stop)
+
+;;; UTF-8 / encoding
+(set-language-environment "UTF-8")
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(setq locale-coding-system 'utf-8)
+(setq-default buffer-file-coding-system 'utf-8-unix)
+
+;; Clipboard: su Windows deve essere UTF-16, sugli altri sistemi UTF-8
+(if (eq system-type 'windows-nt)
+    (progn
+      (set-selection-coding-system 'utf-16le-dos)
+      (set-clipboard-coding-system 'utf-16le-dos))
+  (progn
+    (set-selection-coding-system 'utf-8)
+    (set-clipboard-coding-system 'utf-8)
+    (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))))
 
 ;;; Language specific settings
 ;;; All languages
@@ -253,7 +331,9 @@
 (defun my-python-setup ()
   ;; Tab width and indentation
   (setq-local python-indent-offset my-python-indent)
-  (setq-local tab-width my-python-indent))
+  (setq-local tab-width my-python-indent)
+  (setq-local python-indent-guess-indent-offset nil)
+  (setq-local indent-tabs-mode nil))
 
 (add-hook 'python-mode-hook    #'my-python-setup)
 (add-hook 'python-ts-mode-hook #'my-python-setup)
@@ -270,8 +350,6 @@
   (package-refresh-contents)
   (package-install 'multiple-cursors))
 
-(require 'multiple-cursors)
-
 ;; Multiple cursors shortcuts
 (global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
 (global-set-key (kbd "C->")         'mc/mark-next-like-this)
@@ -283,7 +361,6 @@
   (package-refresh-contents)
   (package-install 'web-mode))
 
-(require 'web-mode)
 (add-to-list 'auto-mode-alist '("\\.phtml\\'"     . web-mode))
 (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'"   . web-mode))
@@ -291,8 +368,6 @@
 (add-to-list 'auto-mode-alist '("\\.erb\\'"       . web-mode))
 (add-to-list 'auto-mode-alist '("\\.mustache\\'"  . web-mode))
 (add-to-list 'auto-mode-alist '("\\.djhtml\\'"    . web-mode))
-
 (add-to-list 'auto-mode-alist '("\\.html?\\'"     . web-mode))
-
 (add-to-list 'auto-mode-alist '("\\.css\\'"       . web-mode))
 (add-to-list 'auto-mode-alist '("\\.js\\'"        . web-mode))
